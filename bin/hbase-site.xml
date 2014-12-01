@@ -28,6 +28,10 @@
   </property>
   <property>
     <name>phoenix.query.maxGlobalMemoryPercentage</name>
-    <value>40</value>
+    <value>80</value>
+  </property>
+  <property>
+    <name>phoenix.query.spoolThresholdBytes</name>
+    <value>500</value>
   </property>
 </configuration>
