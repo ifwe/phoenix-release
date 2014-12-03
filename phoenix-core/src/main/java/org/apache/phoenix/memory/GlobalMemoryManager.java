@@ -53,8 +53,12 @@ public class GlobalMemoryManager implements GlobalMemoryManagerMXBean, MemoryMan
         this.usedMemoryBytes = 0;
 
         MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
-        ObjectName name = new ObjectName("org.apache.phoenix.memory:type=GlobalMemoryManager");
-        mbs.register(this, name);
+        try {
+            ObjectName name = new ObjectName("org.apache.phoenix.memory:type=GlobalMemoryManager");
+            mbs.registerMBean(this, name);
+        } catch (Exception e) {
+            logger.error("Could not create mxbean for GlobalMemoryManager");
+        }
     }
     
     @Override
