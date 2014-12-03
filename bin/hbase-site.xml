@@ -26,12 +26,4 @@
     <name>hbase.regionserver.wal.codec</name>
     <value>org.apache.hadoop.hbase.regionserver.wal.IndexedWALEditCodec</value>
   </property>
-  <property>
-    <name>phoenix.query.maxGlobalMemoryPercentage</name>
-    <value>80</value>
-  </property>
-  <property>
-    <name>phoenix.query.spoolThresholdBytes</name>
-    <value>500</value>
-  </property>
 </configuration>
