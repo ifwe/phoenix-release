@@ -22,10 +22,6 @@ import static org.apache.phoenix.query.QueryServices.MAX_MEMORY_SIZE_ATTRIB;
 import static org.apache.phoenix.query.QueryServices.MAX_MEMORY_WAIT_MS_ATTRIB;
 import static org.apache.phoenix.query.QueryServices.MAX_TENANT_MEMORY_PERC_ATTRIB;
 
-import java.lang.management.ManagementFactory;
-import javax.management.MBeanServer;
-import javax.management.ObjectName;
-
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
@@ -130,12 +126,8 @@ public class GlobalCache extends TenantCacheImpl {
     }
     
     private GlobalCache(Configuration config) {
-        MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
-        ObjectName name = new ObjectName("org.apache.phoenix.memory:type=GlobalMemoryManager");
-        GlobalMemoryManager memoryManager = new GlobalMemoryManager(getMaxMemorySize(config),
-            config.getInt(MAX_MEMORY_WAIT_MS_ATTRIB, QueryServicesOptions.DEFAULT_MAX_MEMORY_WAIT_MS));
-        mbs.register(memoryManager, name);
-        super(memoryManager,
+        super(new GlobalMemoryManager(getMaxMemorySize(config),
+                                      config.getInt(MAX_MEMORY_WAIT_MS_ATTRIB, QueryServicesOptions.DEFAULT_MAX_MEMORY_WAIT_MS)),
               config.getInt(QueryServices.MAX_SERVER_CACHE_TIME_TO_LIVE_MS_ATTRIB, QueryServicesOptions.DEFAULT_MAX_SERVER_CACHE_TIME_TO_LIVE_MS));
         this.config = config;
     }

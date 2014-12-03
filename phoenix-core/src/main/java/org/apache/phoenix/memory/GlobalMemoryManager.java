@@ -21,6 +21,9 @@ import org.apache.http.annotation.GuardedBy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.management.ManagementFactory;
+import javax.management.MBeanServer;
+import javax.management.ObjectName;
 
 /**
  * 
@@ -48,6 +51,10 @@ public class GlobalMemoryManager implements GlobalMemoryManagerMXBean, MemoryMan
         this.maxMemoryBytes = maxBytes;
         this.maxWaitMs = maxWaitMs;
         this.usedMemoryBytes = 0;
+
+        MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+        ObjectName name = new ObjectName("org.apache.phoenix.memory:type=GlobalMemoryManager");
+        mbs.register(this, name);
     }
     
     @Override
