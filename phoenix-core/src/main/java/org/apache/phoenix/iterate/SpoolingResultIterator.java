@@ -86,14 +86,12 @@ public class SpoolingResultIterator implements PeekingResultIterator {
     */
     SpoolingResultIterator(ResultIterator scanner, MemoryManager mm, final int thresholdBytes, final long maxSpoolToDisk) throws SQLException {
         boolean success = false;
-        boolean usedOnDiskIterator = false;
         final MemoryChunk chunk = mm.allocate(0, thresholdBytes);
-        File tempFile = null;
+        DeferredFileOutputStream spoolTo = null;
         try {
             // Can't be bigger than int, since it's the max of the above allocation
             int size = (int)chunk.getSize();
-            tempFile = File.createTempFile("ResultSpooler",".bin");
-            DeferredFileOutputStream spoolTo = new DeferredFileOutputStream(size, tempFile) {
+            spoolTo = new DeferredFileOutputStream(size, "ResultSpooler", ".bin", new File("/var/tmp")) {
                 @Override
                 protected void thresholdReached() throws IOException {
                     super.thresholdReached();
@@ -113,14 +111,12 @@ public class SpoolingResultIterator implements PeekingResultIterator {
                 }
                 maxSize = Math.max(length, maxSize);
             }
-            spoolTo.close();
             if (spoolTo.isInMemory()) {
                 byte[] data = spoolTo.getData();
                 chunk.resize(data.length);
                 spoolFrom = new InMemoryResultIterator(data, chunk);
             } else {
                 spoolFrom = new OnDiskResultIterator(maxSize, spoolTo.getFile());
-                usedOnDiskIterator = true;
             }
             success = true;
         } catch (IOException e) {
@@ -130,9 +126,14 @@ public class SpoolingResultIterator implements PeekingResultIterator {
                 scanner.close();
             } finally {
                 try {
-                    if (!usedOnDiskIterator) {
-                        tempFile.delete();
+                    if (spoolTo != null) {
+                        if(!success && spoolTo.getFile() != null) {
+                            spoolTo.getFile().delete();
+                        }
+                        spoolTo.close();
                     }
+                } catch (IOException ignored) {
+                    // ignore close error
                 } finally {
                     if (!success) {
                         chunk.close();

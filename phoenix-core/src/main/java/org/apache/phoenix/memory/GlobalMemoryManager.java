@@ -21,6 +21,9 @@ import org.apache.http.annotation.GuardedBy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.management.ManagementFactory;
+import javax.management.MBeanServer;
+import javax.management.ObjectName;
 
 /**
  * 
@@ -29,12 +32,13 @@ import org.slf4j.LoggerFactory;
  * 
  * @since 0.1
  */
-public class GlobalMemoryManager implements MemoryManager {
+public class GlobalMemoryManager implements GlobalMemoryManagerMXBean, MemoryManager {
     private static final Logger logger = LoggerFactory.getLogger(GlobalMemoryManager.class);
     
     private final Object sync = new Object();
     private final long maxMemoryBytes;
     private final int maxWaitMs;
+    private long peakMemoryBytes;
     @GuardedBy("sync")
     private volatile long usedMemoryBytes;
     
@@ -48,6 +52,15 @@ public class GlobalMemoryManager implements MemoryManager {
         this.maxMemoryBytes = maxBytes;
         this.maxWaitMs = maxWaitMs;
         this.usedMemoryBytes = 0;
+        this.peakMemoryBytes = 0;
+
+        MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+        try {
+            ObjectName name = new ObjectName("org.apache.phoenix.memory:type=GlobalMemoryManager");
+            mbs.registerMBean(this, name);
+        } catch (Exception e) {
+            logger.error("Could not create mxbean for GlobalMemoryManager");
+        }
     }
     
     @Override
@@ -62,6 +75,16 @@ public class GlobalMemoryManager implements MemoryManager {
         return maxMemoryBytes;
     }
 
+    @Override
+    public long getUsedMemory() {
+        synchronized(sync) {
+            return usedMemoryBytes;
+        }
+    }
+
+    public long getPeakMemory() {
+        return peakMemoryBytes;
+    }
 
     // TODO: Work on fairness: One big memory request can cause all others to block here.
     private long allocateBytes(long minBytes, long reqBytes) {
@@ -91,6 +114,9 @@ public class GlobalMemoryManager implements MemoryManager {
                 throw new IllegalStateException("Allocated bytes (" + nBytes + ") should be at least the minimum requested bytes (" + minBytes + ")");
             }
             usedMemoryBytes += nBytes;
+            if (usedMemoryBytes > peakMemoryBytes) {
+                peakMemoryBytes = usedMemoryBytes;
+            }
         }
         return nBytes;
     }
