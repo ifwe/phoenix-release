@@ -21,4 +21,5 @@ public interface GlobalMemoryManagerMXBean {
     public long getAvailableMemory();
     public long getMaxMemory();
     public long getUsedMemory();
+    public long getPeakMemory();
 }

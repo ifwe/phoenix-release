@@ -38,6 +38,7 @@ public class GlobalMemoryManager implements GlobalMemoryManagerMXBean, MemoryMan
     private final Object sync = new Object();
     private final long maxMemoryBytes;
     private final int maxWaitMs;
+    private long peakMemoryBytes;
     @GuardedBy("sync")
     private volatile long usedMemoryBytes;
     
@@ -51,6 +52,7 @@ public class GlobalMemoryManager implements GlobalMemoryManagerMXBean, MemoryMan
         this.maxMemoryBytes = maxBytes;
         this.maxWaitMs = maxWaitMs;
         this.usedMemoryBytes = 0;
+        this.peakMemoryBytes = 0;
 
         MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
         try {
@@ -78,6 +80,10 @@ public class GlobalMemoryManager implements GlobalMemoryManagerMXBean, MemoryMan
         synchronized(sync) {
             return usedMemoryBytes;
         }
+    }
+
+    public long getPeakMemory() {
+        return peakMemoryBytes;
     }
 
     // TODO: Work on fairness: One big memory request can cause all others to block here.
@@ -108,6 +114,9 @@ public class GlobalMemoryManager implements GlobalMemoryManagerMXBean, MemoryMan
                 throw new IllegalStateException("Allocated bytes (" + nBytes + ") should be at least the minimum requested bytes (" + minBytes + ")");
             }
             usedMemoryBytes += nBytes;
+            if (usedMemoryBytes > peakMemoryBytes) {
+                peakMemoryBytes = usedMemoryBytes;
+            }
         }
         return nBytes;
     }
